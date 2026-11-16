@@ -1,3 +1,5 @@
+using GpsBridge.Core.Settings;
+
 namespace GpsBridge.Core.Ubx;
 
 /// <summary>
@@ -54,24 +56,29 @@ public sealed class ReceiverProfile
         new(name, new[] { (parent, 1UL) }.Concat(sub).ToArray(), new[] { (parent, 0UL) });
 
     /// <summary>Profilo «migliore»: tutte le costellazioni ammesse, 5 Hz, modello portatile, NMEA completo. Baud invariato.</summary>
-    public static ReceiverProfile Best { get; } = new()
+    public static ReceiverProfile Best => FromOptions(new ReceiverOptions());
+
+    public static ReceiverProfile FromOptions(ReceiverOptions o)
     {
-        Constellations = new[]
+        // Ordine di priorita' (da coda si scende in caso di NAK); quelle spente a mano non entrano nell'elenco e vengono spente in Other.
+        var all = new (bool On, ConstellationGroup G)[]
         {
-            G("GPS", UbxKeys.GpsEna, (UbxKeys.GpsL1caEna, 1)),
-            G("Galileo", UbxKeys.GalEna, (UbxKeys.GalE1Ena, 1)),
-            G("BeiDou", UbxKeys.BdsEna, (UbxKeys.BdsB1cEna, 1), (UbxKeys.BdsB1Ena, 0)), // B1C: B1I non convive con GLONASS
-            G("GLONASS", UbxKeys.GloEna, (UbxKeys.GloL1Ena, 1)),
-            G("QZSS", UbxKeys.QzssEna, (UbxKeys.QzssL1caEna, 1)),
-            G("SBAS", UbxKeys.SbasEna, (UbxKeys.SbasL1caEna, 1)),
-        },
-        Other = new (uint, ulong)[]
-        {
-            (UbxKeys.RateMeas, 200),     // 5 Hz
-            (UbxKeys.DynModel, 0),       // portatile
-            (UbxKeys.Uart1OutNmea, 1),
-            (UbxKeys.MsgGga, 1), (UbxKeys.MsgGll, 1), (UbxKeys.MsgGsa, 1),
-            (UbxKeys.MsgGsv, 1), (UbxKeys.MsgRmc, 1), (UbxKeys.MsgVtg, 1),
-        },
-    };
+            (o.Gps, G("GPS", UbxKeys.GpsEna, (UbxKeys.GpsL1caEna, 1))),
+            (o.Galileo, G("Galileo", UbxKeys.GalEna, (UbxKeys.GalE1Ena, 1))),
+            (o.BeiDou, G("BeiDou", UbxKeys.BdsEna, (UbxKeys.BdsB1cEna, 1), (UbxKeys.BdsB1Ena, 0))), // B1C: B1I non convive con GLONASS
+            (o.Glonass, G("GLONASS", UbxKeys.GloEna, (UbxKeys.GloL1Ena, 1))),
+            (o.Qzss, G("QZSS", UbxKeys.QzssEna, (UbxKeys.QzssL1caEna, 1))),
+            (o.Sbas, G("SBAS", UbxKeys.SbasEna, (UbxKeys.SbasL1caEna, 1))),
+        };
+        var other = new List<(uint, ulong)>();
+        foreach (var (on, g) in all) if (!on) other.AddRange(g.Disable);
+        other.Add((UbxKeys.RateMeas, (ulong)(1000 / Math.Clamp(o.RateHz, 1, 10))));
+        other.Add((UbxKeys.DynModel, (ulong)o.DynModel));
+        other.Add((UbxKeys.Uart1OutNmea, 1));
+        void Msg(uint key, bool on) => other.Add((key, on ? 1UL : 0UL));
+        Msg(UbxKeys.MsgGga, o.Gga); Msg(UbxKeys.MsgGll, o.Gll); Msg(UbxKeys.MsgGsa, o.Gsa);
+        Msg(UbxKeys.MsgGsv, o.Gsv); Msg(UbxKeys.MsgRmc, o.Rmc); Msg(UbxKeys.MsgVtg, o.Vtg);
+        if (o.UartBaud is { } baud) other.Add((UbxKeys.Uart1Baud, (ulong)baud));   // sempre per ultima: cambia la velocita' del collegamento
+        return new ReceiverProfile { Constellations = all.Where(x => x.On).Select(x => x.G).ToArray(), Other = other };
+    }
 }
