@@ -10,6 +10,7 @@ public sealed class GnssState
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
+    readonly object _l = new();
     double? _lat, _lon, _alt;
     TimeSpan? _time;
     DateTime? _date;
@@ -32,10 +33,12 @@ public sealed class GnssState
     {
         get
         {
+            lock (_l) {
             if (FixQuality <= 0 || _rmcStatus == 'V' || _lat is null || _lon is null || _time is null) return null;
             var date = _date ?? DateTime.UtcNow.Date;
             var utc = new DateTimeOffset(date.Add(_time.Value), TimeSpan.Zero);
             return new GnssFix(_lat.Value, _lon.Value, _alt, utc, _speed, _course);
+            }
         }
     }
 
@@ -43,6 +46,7 @@ public sealed class GnssState
     {
         get
         {
+            lock (_l) {
             var best = new Dictionary<(string, int), SatInfo>();
             foreach (var list in _committed.Values)
                 foreach (var s in list)
@@ -53,6 +57,7 @@ public sealed class GnssState
                         best[(s.Constellation, s.Prn)] = sat;
                 }
             return best.Values.OrderBy(s => s.Constellation).ThenBy(s => s.Prn).ToList();
+            }
         }
     }
 
@@ -66,13 +71,16 @@ public sealed class GnssState
 
     public void Apply(NmeaSentence s)
     {
-        switch (s.Type)
+        lock (_l)
         {
-            case "GGA": Gga(s.Fields); break;
-            case "RMC": Rmc(s.Fields); break;
-            case "GSA": Gsa(s); break;
-            case "GSV": Gsv(s); break;
-            default: return;
+            switch (s.Type)
+            {
+                case "GGA": Gga(s.Fields); break;
+                case "RMC": Rmc(s.Fields); break;
+                case "GSA": Gsa(s); break;
+                case "GSV": Gsv(s); break;
+                default: return;
+            }
         }
         Changed?.Invoke();
     }

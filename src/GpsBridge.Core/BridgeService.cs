@@ -19,6 +19,7 @@ public sealed class BridgeService : IDisposable
     readonly AppSettings _settings;
     readonly IRunnableSource _source;
     readonly bool _applyOnConnect;
+    readonly IByteStream _earthOut;
     readonly Stopwatch _win = Stopwatch.StartNew();
     long _winCount;
     CancellationTokenSource? _cts;
@@ -40,7 +41,7 @@ public sealed class BridgeService : IDisposable
 
     public BridgeService(AppSettings settings, IRunnableSource source, IByteStream earthOut, bool applyProfileOnConnect = true)
     {
-        _settings = settings; _source = source; _applyOnConnect = applyProfileOnConnect && settings.ApplyProfileOnConnect;
+        _settings = settings; _source = source; _earthOut = earthOut; _applyOnConnect = applyProfileOnConnect && settings.ApplyProfileOnConnect;
         Gpx = new GpxRecorder(settings.GpxDir, settings.MinMoveMeters);
         Earth = new EarthWriter(earthOut, settings.EarthHz);
         Config = new UbxConfigurator(b => _source.Write(b), Splitter);
@@ -121,6 +122,6 @@ public sealed class BridgeService : IDisposable
     public void Dispose()
     {
         Stop();
-        if (Earth is not null) { }
+        (_earthOut as IDisposable)?.Dispose();
     }
 }
