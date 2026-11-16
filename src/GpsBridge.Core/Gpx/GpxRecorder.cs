@@ -26,6 +26,9 @@ public sealed class GpxRecorder
     public void Resume() { lock (_lock) { IsPaused = false; _last = null; } }
     public string? CurrentFile { get; private set; }
     public int Points { get; private set; }
+    readonly List<TrackPoint> _pts = new();
+    /// <summary>Copia dei punti scritti finora (per statistiche e profilo altimetrico in tempo reale).</summary>
+    public IReadOnlyList<TrackPoint> Snapshot() { lock (_lock) return _pts.ToList(); }
 
     public GpxRecorder(string dir, double minMoveMeters = 3, double minSpeedKnots = 0.3)
     {
@@ -44,7 +47,7 @@ public sealed class GpxRecorder
             WriteRaw("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                      "<gpx version=\"1.1\" creator=\"GpsBridge\" xmlns=\"http://www.topografix.com/GPX/1/1\">\n" +
                      $" <trk>\n  <name>{name}</name>\n  <trkseg>\n" + Footer);
-            _last = null; Points = 0;
+            _last = null; Points = 0; _pts.Clear();
         }
     }
 
@@ -76,6 +79,7 @@ public sealed class GpxRecorder
             _fs.Seek(-Encoding.UTF8.GetByteCount(Footer), SeekOrigin.End);
             WriteRaw(sb.ToString() + Footer);
             _last = (f.Lat, f.Lon); Points++;
+            if (_pts.Count < 500_000) _pts.Add(new TrackPoint(f.Lat, f.Lon, f.Alt, f.Utc));
         }
     }
 

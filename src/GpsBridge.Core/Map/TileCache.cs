@@ -1,6 +1,21 @@
 namespace GpsBridge.Core.Map;
 
-/// <summary>Cache su disco delle tile OSM (z/x/y.png): serve la mappa anche senza rete. Nessun prescaricamento (policy OSM).</summary>
+public static class TileSources
+{
+    public static readonly IReadOnlyList<(string Id, string Name)> Layers = new[]
+    {
+        ("osm", "Stradale (OpenStreetMap)"), ("topo", "Topografica (OpenTopoMap)"), ("sat", "Satellite (Esri)"),
+    };
+
+    public static string Url(string layer, int z, int x, int y) => layer switch
+    {
+        "topo" => $"https://tile.opentopomap.org/{z}/{x}/{y}.png",
+        "sat" => $"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        _ => $"https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    };
+}
+
+/// <summary>Cache su disco delle tile (layer/z/x/y.png): serve la mappa anche senza rete. Nessun prescaricamento (policy dei provider).</summary>
 public sealed class TileCache
 {
     readonly string _dir;
@@ -15,16 +30,22 @@ public sealed class TileCache
         _dir = dir; _maxBytes = maxBytes; _fetch = fetch; _checkEvery = checkEvery;
     }
 
-    public static string OsmUrl(int z, int x, int y) => $"https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+    public static string OsmUrl(int z, int x, int y) => TileSources.Url("osm", z, x, y);
 
-    string PathFor(int z, int x, int y) => Path.Combine(_dir, z.ToString(), x.ToString(), y + ".png");
+    // «osm» resta nella radice (compatibile con le cache gia' esistenti), gli altri in una sottocartella.
+    string PathFor(string layer, int z, int x, int y) =>
+        layer == "osm" ? Path.Combine(_dir, z.ToString(), x.ToString(), y + ".png")
+                       : Path.Combine(_dir, layer, z.ToString(), x.ToString(), y + ".png");
 
-    public async Task<byte[]?> GetAsync(int z, int x, int y)
+    public Task<byte[]?> GetAsync(int z, int x, int y) => GetAsync("osm", z, x, y);
+
+    public async Task<byte[]?> GetAsync(string layer, int z, int x, int y)
     {
-        var path = PathFor(z, x, y);
+        if (layer is not ("osm" or "topo" or "sat")) return null;
+        var path = PathFor(layer, z, x, y);
         try { if (File.Exists(path)) return await File.ReadAllBytesAsync(path); } catch { /* tile corrotta/in uso: si riscarica */ }
         byte[] data;
-        try { data = await _fetch(OsmUrl(z, x, y)); }
+        try { data = await _fetch(TileSources.Url(layer, z, x, y)); }
         catch { return null; }
         try
         {

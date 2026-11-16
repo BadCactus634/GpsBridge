@@ -42,3 +42,21 @@ public class TileCacheTests : IDisposable
         Assert.Equal("https://tile.openstreetmap.org/5/10/12.png", TileCache.OsmUrl(5, 10, 12));
     }
 }
+
+public class TileLayerTests : IDisposable
+{
+    readonly string _dir = Path.Combine(Path.GetTempPath(), "gpsb-tl-" + Guid.NewGuid().ToString("N"));
+    public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
+
+    [Fact]
+    public async Task Layers_use_their_own_url_and_folder_and_unknown_layer_is_refused()
+    {
+        var urls = new List<string>();
+        var c = new TileCache(_dir, 1_000_000, u => { urls.Add(u); return Task.FromResult(new byte[] { 9 }); });
+        await c.GetAsync("sat", 3, 4, 5); await c.GetAsync("topo", 3, 4, 5);
+        Assert.Contains("World_Imagery/MapServer/tile/3/5/4", urls[0]);
+        Assert.Equal("https://tile.opentopomap.org/3/4/5.png", urls[1]);
+        Assert.True(File.Exists(Path.Combine(_dir, "sat", "3", "4", "5.png")));
+        Assert.Null(await c.GetAsync("../x", 1, 1, 1));
+    }
+}
