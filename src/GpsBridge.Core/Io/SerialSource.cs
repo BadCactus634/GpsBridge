@@ -48,6 +48,7 @@ public sealed class SerialSource : IRunnableSource
 
     readonly Func<string, int, IPort> _opener;
     readonly Func<IEnumerable<string>> _listPorts;
+    readonly string? _prefPort; readonly int? _prefBaud;
     readonly string? _fixedPort;
     readonly int? _fixedBaud;
     readonly TimeSpan _probe;
@@ -60,12 +61,15 @@ public sealed class SerialSource : IRunnableSource
     public int DetectedBaud { get; private set; }
     public string? PortName { get; private set; }
     public int Reconnects { get; private set; }
+    public string? LastGoodPort { get; private set; }
+    public int? LastGoodBaud { get; private set; }
     public ConnState State => _state;
 
     public SerialSource(Func<string, int, IPort> opener, Func<IEnumerable<string>> listPorts,
-        string? fixedPort = null, int? fixedBaud = null, TimeSpan? probe = null, int[]? backoffMs = null)
+        string? fixedPort = null, int? fixedBaud = null, TimeSpan? probe = null, int[]? backoffMs = null,
+        string? preferredPort = null, int? preferredBaud = null)
     {
-        _opener = opener; _listPorts = listPorts; _fixedPort = fixedPort; _fixedBaud = fixedBaud;
+        _prefPort = preferredPort; _prefBaud = preferredBaud; _opener = opener; _listPorts = listPorts; _fixedPort = fixedPort; _fixedBaud = fixedBaud;
         _probe = probe ?? TimeSpan.FromMilliseconds(1500);
         _backoffMs = backoffMs ?? new[] { 1000, 2000, 5000, 10000 };
     }
@@ -103,11 +107,11 @@ public sealed class SerialSource : IRunnableSource
     {
         Set(ConnState.Connecting);
         IEnumerable<string> ports;
-        try { ports = _fixedPort is not null ? new[] { _fixedPort } : _listPorts().ToList(); }
+        try { ports = _fixedPort is not null ? new[] { _fixedPort } : _listPorts().OrderBy(p => p == (LastGoodPort ?? _prefPort) ? 0 : 1).ToList(); }
         catch { return false; }
 
         foreach (var name in ports)
-            foreach (int baud in _fixedBaud is { } fb ? new[] { fb } : CandidateBauds)
+            foreach (int baud in _fixedBaud is { } fb ? new[] { fb } : CandidateBauds.OrderBy(b => b == (LastGoodBaud ?? _prefBaud) ? 0 : 1).ToArray())
             {
                 if (ct.IsCancellationRequested) return false;
                 IPort? port = null;
@@ -116,7 +120,7 @@ public sealed class SerialSource : IRunnableSource
                     port = _opener(name, baud);
                     port.Open();
                     if (!Probe(port, ct, out var first)) { port.Dispose(); continue; }
-                    _current = port; PortName = name; DetectedBaud = baud;
+                    _current = port; PortName = name; DetectedBaud = baud; LastGoodPort = name; LastGoodBaud = baud;
                     Set(ConnState.Connected);
                     foreach (var c in first) DataReceived?.Invoke(c);
                     ReadLoop(port, ct);

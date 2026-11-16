@@ -57,7 +57,7 @@ public sealed class BridgeService : IDisposable
     {
         var src = new SerialSource((n, b) => new SerialPortAdapter(n, b),
             () => SerialPortAdapter.List().Where(p => p != s.EarthPort && p != s.EarthPeerPort),
-            s.RealPort, s.RealBaud);
+            s.RealPort, s.RealBaud, preferredPort: s.LastPort, preferredBaud: s.LastBaud);
         var earth = new PortWriter(() => new SerialPortAdapter(s.EarthPort, s.EarthBaud));
         return new BridgeService(s, src, earth);
     }
@@ -65,6 +65,8 @@ public sealed class BridgeService : IDisposable
     void SetConnection(ConnState c)
     {
         Connection = c; ConnectionChanged?.Invoke(c);
+        if (c == ConnState.Connected && _source is SerialSource sp && (_settings.LastPort != sp.PortName || _settings.LastBaud != sp.DetectedBaud))
+        { _settings.LastPort = sp.PortName; _settings.LastBaud = sp.DetectedBaud; try { _settings.Save(AppSettings.DefaultPath); } catch { } }
         if (c == ConnState.Connected && _applyOnConnect) _ = ApplyProfileAsync();
     }
 

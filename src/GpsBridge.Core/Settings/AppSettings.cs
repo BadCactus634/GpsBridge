@@ -29,7 +29,10 @@ public sealed class AppSettings
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
     public string? RealPort { get; set; }          // null = automatica
-    public int? RealBaud { get; set; }             // null = autorilevamento
+    public int? RealBaud { get; set; }
+    /// <summary>Ultima porta/baud con cui il ricevitore ha risposto: provati per primi.</summary>
+    public string? LastPort { get; set; }
+    public int? LastBaud { get; set; }             // null = autorilevamento
     public string EarthPort { get; set; } = "COM20";
     /// <summary>Porta che Google Earth deve aprire (l'altra estremita' della coppia com0com).</summary>
     public string EarthPeerPort { get; set; } = "COM21";
