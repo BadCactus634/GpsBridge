@@ -33,25 +33,21 @@ public sealed class AppSettings
     /// <summary>Ultima porta/baud con cui il ricevitore ha risposto: provati per primi.</summary>
     public string? LastPort { get; set; }
     public int? LastBaud { get; set; }             // null = autorilevamento
-    public string EarthPort { get; set; } = "COM20";
-    /// <summary>Porta che Google Earth deve aprire (l'altra estremita' della coppia com0com).</summary>
-    public string EarthPeerPort { get; set; } = "COM21";
-    public int EarthBaud { get; set; } = 4800;
     public bool ApplyProfileOnConnect { get; set; } = true;
     /// <summary>Google Earth via KML live su localhost (nessun driver).</summary>
     public bool KmlEnabled { get; set; } = true;
     public int KmlPort { get; set; } = 8765;
     public bool KmlFollow { get; set; } = true;
-    /// <summary>Uscita NMEA su COM virtuale (serve com0com o simili): spenta di default.</summary>
-    public bool EarthComEnabled { get; set; }
-    public double EarthHz { get; set; } = 1;
     public string GpxDir { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "GpsBridge", "Tracce");
     public double MinMoveMeters { get; set; } = 3;
     public long TileCacheMb { get; set; } = 500;
-    public bool AutoStartBridge { get; set; }
     public bool AutoStartRecording { get; set; }
     public bool StartWithWindows { get; set; }
+    public Geo.CoordFormat CoordFormat { get; set; } = Geo.CoordFormat.Decimal;
+    public Geo.UnitSystem Units { get; set; } = Geo.UnitSystem.Metric;
+    /// <summary>Livello mappa: osm, topo, sat.</summary>
+    public string MapLayer { get; set; } = "osm";
     public ReceiverOptions Receiver { get; set; } = new();
 
     public static string DefaultPath => Path.Combine(

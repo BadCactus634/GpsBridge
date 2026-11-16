@@ -14,13 +14,14 @@ public class AppSettingsTests : IDisposable
     public void Save_then_Load_round_trips()
     {
         var path = Path.Combine(_dir, "s.json");
-        var s = new AppSettings { EarthPort = "COM30", EarthHz = 2, AutoStartBridge = true };
+        var s = new AppSettings { KmlPort = 9000, Units = Geo.UnitSystem.Nautical, CoordFormat = Geo.CoordFormat.Utm, AutoStartRecording = true };
         s.Receiver.RateHz = 10; s.Receiver.Glonass = false;
         s.Save(path);
         var l = AppSettings.Load(path);
-        Assert.Equal("COM30", l.EarthPort);
-        Assert.Equal(2, l.EarthHz);
-        Assert.True(l.AutoStartBridge);
+        Assert.Equal(9000, l.KmlPort);
+        Assert.Equal(Geo.UnitSystem.Nautical, l.Units);
+        Assert.Equal(Geo.CoordFormat.Utm, l.CoordFormat);
+        Assert.True(l.AutoStartRecording);
         Assert.Equal(10, l.Receiver.RateHz);
         Assert.False(l.Receiver.Glonass);
     }
@@ -28,11 +29,11 @@ public class AppSettingsTests : IDisposable
     [Fact]
     public void Missing_or_corrupt_file_gives_defaults()
     {
-        Assert.Equal("COM20", AppSettings.Load(Path.Combine(_dir, "nope.json")).EarthPort);
+        Assert.Equal(8765, AppSettings.Load(Path.Combine(_dir, "nope.json")).KmlPort);
         var bad = Path.Combine(_dir, "bad.json");
         File.WriteAllText(bad, "{ questo non e' json");
         var d = AppSettings.Load(bad);
-        Assert.Equal(4800, d.EarthBaud);
+        Assert.True(d.KmlEnabled);
         Assert.Equal(5, d.Receiver.RateHz);
     }
 

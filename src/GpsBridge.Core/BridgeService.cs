@@ -13,13 +13,12 @@ public sealed class BridgeStats
     public double Rate;   // frasi valide al secondo (finestra di 1 s)
 }
 
-/// <summary>Collega sorgente -> splitter -> {Earth, GPX, stato} e gestisce la configurazione all'avvio.</summary>
+/// <summary>Collega sorgente -> splitter -> {GPX, KML, stato} e gestisce la configurazione all'avvio.</summary>
 public sealed class BridgeService : IDisposable
 {
     readonly AppSettings _settings;
     readonly IRunnableSource _source;
     readonly bool _applyOnConnect;
-    readonly IByteStream _earthOut;
     readonly Stopwatch _win = Stopwatch.StartNew();
     long _winCount;
     CancellationTokenSource? _cts;
@@ -27,7 +26,7 @@ public sealed class BridgeService : IDisposable
     public FrameSplitter Splitter { get; } = new();
     public GnssState State { get; } = new();
     public GpxRecorder Gpx { get; }
-    public EarthWriter Earth { get; }
+    public Waypoints.WaypointStore Waypoints { get; }
     public Kml.KmlServer? Live { get; private set; }
     public string? KmlError { get; private set; }
     public UbxConfigurator Config { get; }
@@ -41,11 +40,11 @@ public sealed class BridgeService : IDisposable
     public event Action<ConnState>? ConnectionChanged;
     public event Action? ConfigChanged;
 
-    public BridgeService(AppSettings settings, IRunnableSource source, IByteStream earthOut, bool applyProfileOnConnect = true)
+    public BridgeService(AppSettings settings, IRunnableSource source, Waypoints.WaypointStore? waypoints = null, bool applyProfileOnConnect = true)
     {
-        _settings = settings; _source = source; _earthOut = earthOut; _applyOnConnect = applyProfileOnConnect && settings.ApplyProfileOnConnect;
+        _settings = settings; _source = source; _applyOnConnect = applyProfileOnConnect && settings.ApplyProfileOnConnect;
         Gpx = new GpxRecorder(settings.GpxDir, settings.MinMoveMeters);
-        Earth = new EarthWriter(earthOut, settings.EarthHz);
+        Waypoints = waypoints ?? new Waypoints.WaypointStore(null);
         Config = new UbxConfigurator(b => _source.Write(b), Splitter);
 
         source.DataReceived += d => Splitter.Feed(d);
@@ -55,13 +54,12 @@ public sealed class BridgeService : IDisposable
         if (source is SerialSource ss) ss.StateChanged += SetConnection;
     }
 
-    public static BridgeService CreateReal(AppSettings s)
+    public static BridgeService CreateReal(AppSettings s, Waypoints.WaypointStore waypoints)
     {
         var src = new SerialSource((n, b) => new SerialPortAdapter(n, b),
-            () => SerialPortAdapter.List().Where(p => p != s.EarthPort && p != s.EarthPeerPort),
+            SerialPortAdapter.List,
             s.RealPort, s.RealBaud, preferredPort: s.LastPort, preferredBaud: s.LastBaud);
-        IByteStream earth = s.EarthComEnabled ? new PortWriter(() => new SerialPortAdapter(s.EarthPort, s.EarthBaud)) : new NullStream();
-        return new BridgeService(s, src, earth);
+        return new BridgeService(s, src, waypoints);
     }
 
     void SetConnection(ConnState c)
@@ -92,7 +90,6 @@ public sealed class BridgeService : IDisposable
             Stats.Rate = _winCount / _win.Elapsed.TotalSeconds; _winCount = 0; _win.Restart();
         }
         State.Apply(s);
-        Earth.OnSentence(s);
         if (s.Type == "RMC" && State.Position is { } kp) Live?.Update(kp, DiagnosticsModel.FixText(State.FixQuality));
         if (s.Type == "RMC" && State.Position is { } pos)
             Gpx.OnFix(pos, State.Satellites.Count(x => x.Used), State.Hdop);
@@ -122,6 +119,8 @@ public sealed class BridgeService : IDisposable
         {
             Live = new Kml.KmlServer(_settings.KmlPort) { Follow = _settings.KmlFollow };
             Live.Start();
+            Live.SetWaypoints(Waypoints.Items);
+            Waypoints.Changed += () => Live?.SetWaypoints(Waypoints.Items);
             Directory.CreateDirectory(Path.GetDirectoryName(LinkFile)!);
             File.WriteAllText(LinkFile, Live.NetworkLinkKml());
         }
@@ -144,6 +143,5 @@ public sealed class BridgeService : IDisposable
     {
         Stop();
         Live?.Dispose(); Live = null;
-        (_earthOut as IDisposable)?.Dispose();
     }
 }

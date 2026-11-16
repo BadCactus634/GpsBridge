@@ -21,7 +21,7 @@ public static class KmlBuilder
         $"  <Link>\n   <href>http://127.0.0.1:{port}/position.kml</href>\n" +
         "   <refreshMode>onInterval</refreshMode>\n   <refreshInterval>1</refreshInterval>\n  </Link>\n </NetworkLink>\n</kml>\n";
 
-    public static string Position(GnssFix? fix, IReadOnlyList<(double Lat, double Lon)> track, string status, bool follow)
+    public static string Position(GnssFix? fix, IReadOnlyList<(double Lat, double Lon)> track, string status, bool follow, IReadOnlyList<Waypoints.Waypoint>? waypoints = null)
     {
         var sb = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
             "<kml xmlns=\"http://www.opengis.net/kml/2.2\" xmlns:gx=\"http://www.google.com/kml/ext/2.2\">\n<Document>\n" +
@@ -42,6 +42,13 @@ public static class KmlBuilder
             foreach (var (lat, lon) in track) sb.Append($"{N(lon)},{N(lat)},0 ");
             sb.Append("</coordinates></LineString></Placemark>\n");
         }
+        foreach (var w in waypoints ?? Array.Empty<Waypoints.Waypoint>())
+        {
+            sb.Append($" <Placemark><name>{SecurityElement.Escape(w.Name)}</name>");
+            if (w.Notes.Length > 0) sb.Append($"<description>{SecurityElement.Escape(w.Notes)}</description>");
+            sb.Append($"<Style><IconStyle><color>{Waypoints.WaypointColors.ToKml(w.Color)}</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/pushpin/wht-pushpin.png</href></Icon></IconStyle></Style>");
+            sb.Append($"<Point><coordinates>{N(w.Lon)},{N(w.Lat)},0</coordinates></Point></Placemark>\n");
+        }
         sb.Append("</Document>\n</kml>\n");
         return sb.ToString();
     }
@@ -54,6 +61,7 @@ public sealed class KmlServer : IDisposable
     readonly HttpListener _l = new();
     readonly object _lock = new();
     readonly List<(double, double)> _track = new();
+    IReadOnlyList<Waypoints.Waypoint> _wpts = Array.Empty<Waypoints.Waypoint>();
     GnssFix? _fix; string _status = "Nessun fix";
     CancellationTokenSource? _cts;
 
@@ -77,12 +85,13 @@ public sealed class KmlServer : IDisposable
         lock (_lock)
         {
             _fix = fix; _status = status;
-            if (_track.Count == 0 || Gpx.GpxRecorder.DistanceMeters(_track[^1].Item1, _track[^1].Item2, fix.Lat, fix.Lon) >= 2)
+            if (_track.Count == 0 || Geo.GeoMath.DistanceMeters(_track[^1].Item1, _track[^1].Item2, fix.Lat, fix.Lon) >= 2)
             { _track.Add((fix.Lat, fix.Lon)); if (_track.Count > MaxTrack) _track.RemoveAt(0); }
         }
     }
 
     public string NetworkLinkKml() => KmlBuilder.NetworkLink(Port, Follow);
+    public void SetWaypoints(IReadOnlyList<Waypoints.Waypoint> w) { lock (_lock) _wpts = w; }
     public void ClearTrack() { lock (_lock) _track.Clear(); }
 
     async Task Loop(CancellationToken ct)
@@ -116,7 +125,7 @@ public sealed class KmlServer : IDisposable
 
     string Snapshot()
     {
-        lock (_lock) return KmlBuilder.Position(_fix, _track.ToList(), _status, Follow);
+        lock (_lock) return KmlBuilder.Position(_fix, _track.ToList(), _status, Follow, _wpts);
     }
 
     public void Dispose() { _cts?.Cancel(); try { _l.Close(); } catch { } }

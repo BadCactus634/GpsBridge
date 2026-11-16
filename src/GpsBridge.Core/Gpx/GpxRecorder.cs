@@ -20,6 +20,10 @@ public sealed class GpxRecorder
     readonly object _lock = new();
 
     public bool IsRecording => _fs is not null;
+    /// <summary>In pausa il file resta aperto ma i punti non vengono scritti; Resume() continua nello stesso file.</summary>
+    public bool IsPaused { get; private set; }
+    public void Pause() { lock (_lock) { if (_fs is not null) IsPaused = true; } }
+    public void Resume() { lock (_lock) { IsPaused = false; _last = null; } }
     public string? CurrentFile { get; private set; }
     public int Points { get; private set; }
 
@@ -46,7 +50,7 @@ public sealed class GpxRecorder
 
     public void Stop()
     {
-        lock (_lock) { _fs?.Dispose(); _fs = null; }
+        lock (_lock) { _fs?.Dispose(); _fs = null; IsPaused = false; }
     }
 
     void WriteRaw(string text)
@@ -60,8 +64,8 @@ public sealed class GpxRecorder
     {
         lock (_lock)
         {
-            if (_fs is null) return;
-            if (_last is { } l && DistanceMeters(l.Lat, l.Lon, f.Lat, f.Lon) < _minMove && (f.SpeedKnots ?? 0) < _minSpeed) return;
+            if (_fs is null || IsPaused) return;
+            if (_last is { } l && Geo.GeoMath.DistanceMeters(l.Lat, l.Lon, f.Lat, f.Lon) < _minMove && (f.SpeedKnots ?? 0) < _minSpeed) return;
             var sb = new StringBuilder();
             sb.Append($"   <trkpt lat=\"{f.Lat.ToString("0.0000000", Inv)}\" lon=\"{f.Lon.ToString("0.0000000", Inv)}\">");
             if (f.Alt is { } a) sb.Append($"<ele>{a.ToString("0.0", Inv)}</ele>");
@@ -86,14 +90,5 @@ public sealed class GpxRecorder
         else { int s = text.IndexOf("<trkseg>", StringComparison.Ordinal); if (s < 0) return false; cut = s + "<trkseg>".Length; }
         File.WriteAllText(path, text[..cut] + "\n" + Footer, new UTF8Encoding(false));
         return true;
-    }
-
-    public static double DistanceMeters(double lat1, double lon1, double lat2, double lon2)
-    {
-        const double R = 6371000;
-        double dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
-        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                   Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-        return 2 * R * Math.Asin(Math.Min(1, Math.Sqrt(a)));
     }
 }
