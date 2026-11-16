@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using GpsBridge.Core.Nmea;
 using GpsBridge.Core.Ubx;
 using Xunit;
@@ -10,7 +10,7 @@ sealed class FakeReceiver
 {
     public readonly FrameSplitter Splitter = new();
     public readonly Dictionary<int, Dictionary<uint, ulong>> Layers = new() { [0] = new(), [1] = new(), [2] = new() }; // RAM,BBR,Flash
-    public int ValSets;
+    public int ValSets, Writes;
     public bool Silent;
     public Func<IReadOnlyDictionary<uint, ulong>, bool> Accepts = _ => true;
 
@@ -41,6 +41,7 @@ sealed class FakeReceiver
             if ((p[1] & 1) != 0) foreach (var kv in items) Layers[0][kv.Key] = kv.Value;
             if ((p[1] & 2) != 0) foreach (var kv in items) Layers[1][kv.Key] = kv.Value;
             if ((p[1] & 4) != 0) foreach (var kv in items) Layers[2][kv.Key] = kv.Value;
+            Writes++;
             Splitter.Feed(UbxFrame.Build(0x05, 0x01, new byte[] { 0x06, 0x8A }));
         }
         else if (cls == 0x06 && id == 0x8B)
@@ -118,10 +119,10 @@ public class UbxConfiguratorTests
         var (rx, cfg) = Make();
         rx.Accepts = items => !(items.TryGetValue(UbxKeys.GloEna, out var g) && g == 1);
         await cfg.ApplyAsync(ReceiverProfile.Best, All);
-        int before = rx.ValSets;
+        int before = rx.Writes;
         var r = await cfg.ApplyAsync(ReceiverProfile.Best, All);
         Assert.True(r.Ok); Assert.True(r.AlreadyOk);
-        Assert.Equal(before + 1, rx.ValSets);   // solo il tentativo completo, rifiutato (NAK, nessuna scrittura)
+        Assert.Equal(before, rx.Writes);   // i tentativi rifiutati (NAK) non scrivono, quello gia' a posto non riscrive la flash
         Assert.Equal(new[] { "GPS", "Galileo", "BeiDou" }, r.Active);
     }
 
@@ -135,3 +136,4 @@ public class UbxConfiguratorTests
         Assert.Contains("risposta", r.Error);
     }
 }
+
