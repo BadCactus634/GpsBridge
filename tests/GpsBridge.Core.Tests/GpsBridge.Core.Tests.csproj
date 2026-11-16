@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -24,4 +24,8 @@
     <ProjectReference Include="..\..\src\GpsBridge.Core\GpsBridge.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\data\sample-multi-gnss.nmea" Link="data\sample-multi-gnss.nmea" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
+
