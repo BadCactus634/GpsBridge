@@ -31,7 +31,10 @@ public sealed class AppSettings
     public string? RealPort { get; set; }          // null = automatica
     public int? RealBaud { get; set; }             // null = autorilevamento
     public string EarthPort { get; set; } = "COM20";
+    /// <summary>Porta che Google Earth deve aprire (l'altra estremita' della coppia com0com).</summary>
+    public string EarthPeerPort { get; set; } = "COM21";
     public int EarthBaud { get; set; } = 4800;
+    public bool ApplyProfileOnConnect { get; set; } = true;
     public double EarthHz { get; set; } = 1;
     public string GpxDir { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "GpsBridge", "Tracce");

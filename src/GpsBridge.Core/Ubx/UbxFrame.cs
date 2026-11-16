@@ -52,6 +52,17 @@ public static class UbxFrame
         return Build(0x06, 0x8B, p.ToArray());
     }
 
+    /// <summary>CFG-VALDEL: toglie le chiavi dai layer indicati (solo BBR=2 e Flash=4); tornano ai valori di default.</summary>
+    public static byte[] ValDel(byte layers, IEnumerable<uint> keys)
+    {
+        var p = new List<byte> { 0, layers, 0, 0 };
+        foreach (var k in keys) p.AddRange(BitConverter.GetBytes(k));
+        return Build(0x06, 0x8C, p.ToArray());
+    }
+
+    /// <summary>CFG-RST: riavvio software controllato (ricarica la configurazione da flash/ROM).</summary>
+    public static byte[] Rst() => Build(0x06, 0x04, new byte[] { 0x00, 0x00, 0x01, 0x00 });
+
     /// <summary>Risposta CFG-VALGET (payload) -> coppie chiave/valore.</summary>
     public static Dictionary<uint, ulong> ParseValGet(byte[] payload)
     {

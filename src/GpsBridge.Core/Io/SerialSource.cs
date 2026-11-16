@@ -17,6 +17,12 @@ public interface IPort : IDisposable
     void Write(byte[] buf, int off, int count);
 }
 
+/// <summary>Sorgente di byte che gira in un ciclo proprio (porta reale o file di prova).</summary>
+public interface IRunnableSource : IByteStream
+{
+    Task RunAsync(CancellationToken ct);
+}
+
 public enum ConnState { Disconnected, Connecting, Connected }
 
 public sealed class SerialPortAdapter : IPort
@@ -36,7 +42,7 @@ public sealed class SerialPortAdapter : IPort
 }
 
 /// <summary>Porta reale con autorilevamento del baud e riconnessione automatica.</summary>
-public sealed class SerialSource : IByteStream
+public sealed class SerialSource : IRunnableSource
 {
     public static readonly int[] CandidateBauds = { 115200, 38400, 9600, 4800, 230400 };
 
@@ -156,7 +162,7 @@ public sealed class SerialSource : IByteStream
 }
 
 /// <summary>Riproduce un file NMEA come se fosse un ricevitore (prove senza hardware, --replay).</summary>
-public sealed class ReplayStream : IByteStream
+public sealed class ReplayStream : IRunnableSource
 {
     readonly string _path; readonly int _delay; readonly bool _loop;
     public event Action<byte[]>? DataReceived;
