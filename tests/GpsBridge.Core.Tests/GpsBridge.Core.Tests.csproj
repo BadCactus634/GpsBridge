@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -28,4 +28,5 @@
     <None Include="..\data\sample-multi-gnss.nmea" Link="data\sample-multi-gnss.nmea" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
+
 
