@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\GpsBridge.Core\GpsBridge.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\icon\icon.ico</ApplicationIcon>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+
+    <!-- Identità e versione (si vedono in Proprietà del file e nel box «Informazioni») -->
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <Product>GpsBridge</Product>
+    <AssemblyTitle>GpsBridge</AssemblyTitle>
+    <Authors>Stefano Rossi</Authors>
+    <Company>Stefano Rossi</Company>
+    <Copyright>Copyright (c) 2026 Stefano Rossi</Copyright>
+    <Description>GpsBridge - app per ricevitori GPS u-blox: mappa, punti, tracce GPX, diagnostica e Google Earth</Description>
+    <RepositoryUrl>https://github.com/BadCactus634/GpsBridge</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="Assets\icon\icon.ico" />
+    <Resource Include="Assets\icon\icon-1024.png" />
+    <!-- Data di compilazione, letta dal box «Informazioni» -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>BuildDate</_Parameter1>
+      <_Parameter2>$([System.DateTime]::Now.ToString("yyyy-MM-dd HH:mm"))</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>

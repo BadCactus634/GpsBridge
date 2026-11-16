@@ -1,0 +1,42 @@
+<Window Background="{DynamicResource Bg}" Foreground="{DynamicResource Text}" FontFamily="Segoe UI" FontSize="12"
+        x:Class="GpsBridge.App.AboutDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Informazioni su GpsBridge" Width="460" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" Icon="Assets/icon/icon.ico">
+    <StackPanel Margin="26,22,26,20">
+        <StackPanel Orientation="Horizontal">
+            <Image Source="Assets/icon/icon-1024.png" Width="80" Height="80" RenderOptions.BitmapScalingMode="Fant" SnapsToDevicePixels="True"/>
+            <StackPanel Margin="16,2,0,0" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="GPS" FontFamily="{StaticResource Mono}" FontWeight="Bold" FontSize="24" Foreground="{DynamicResource Accent}"/>
+                    <TextBlock Text="BRIDGE" FontFamily="{StaticResource Mono}" FontWeight="Bold" FontSize="24"/>
+                </StackPanel>
+                <TextBlock x:Name="TxtVersion" FontFamily="{StaticResource Mono}" Foreground="{DynamicResource Dim}" Margin="0,2,0,0"/>
+                <TextBlock x:Name="TxtBuild" FontFamily="{StaticResource Mono}" Foreground="{DynamicResource Dim}"/>
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock Text="Per ricevitori GPS u-blox: tutte le costellazioni, mappa, punti colorati, tracce GPX, diagnostica e posizione live in Google Earth." TextWrapping="Wrap" Margin="0,16,0,0"/>
+
+        <TextBlock Text="CREDITI" Style="{StaticResource Sect}"/>
+        <TextBlock Text="Ideato e sviluppato da Stefano Rossi" FontWeight="SemiBold" FontSize="14"/>
+        <TextBlock Margin="0,4,0,0"><Hyperlink NavigateUri="https://natmus.net" RequestNavigate="Link_Navigate" Foreground="{DynamicResource Accent}">natmus.net</Hyperlink>
+            · GitHub <Hyperlink NavigateUri="https://github.com/BadCactus634" RequestNavigate="Link_Navigate" Foreground="{DynamicResource Accent}">BadCactus634</Hyperlink></TextBlock>
+
+        <TextBlock Text="PROGETTO" Style="{StaticResource Sect}"/>
+        <TextBlock><Hyperlink NavigateUri="https://github.com/BadCactus634/GpsBridge" RequestNavigate="Link_Navigate" Foreground="{DynamicResource Accent}">github.com/BadCactus634/GpsBridge</Hyperlink></TextBlock>
+        <TextBlock Text="Software libero, licenza MIT." Foreground="{DynamicResource Dim}" Margin="0,2,0,0"/>
+
+        <TextBlock Text="COMPONENTI DI TERZE PARTI" Style="{StaticResource Sect}"/>
+        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Dim}"
+                   Text="Leaflet (BSD-2), Microsoft WebView2, System.IO.Ports. Mappe: © OpenStreetMap contributors, OpenTopoMap (CC-BY-SA), Esri World Imagery."/>
+
+        <TextBlock x:Name="TxtUpd" Foreground="{DynamicResource Good}" TextWrapping="Wrap" Margin="0,14,0,0"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button x:Name="BtnCheck" Content="Controlla aggiornamenti" Click="Check_Click"/>
+            <Button Content="Copia versione" Click="Copy_Click"/>
+            <Button Content="Chiudi" Style="{StaticResource Primary}" IsDefault="True" IsCancel="True" MinWidth="80"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

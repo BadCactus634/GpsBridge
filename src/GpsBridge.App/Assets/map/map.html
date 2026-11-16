@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="leaflet.css">
+<style>
+html,body,#m{height:100%;margin:0;background:#0B0F14}
+.leaflet-container{font-family:Segoe UI,sans-serif}
+.me{width:22px;height:22px;box-sizing:border-box;border-radius:50%;background:#0B57D0;border:3px solid #fff;box-shadow:0 0 0 2px #06214F,0 0 0 8px rgba(11,87,208,.30),0 2px 6px 2px rgba(0,0,0,.55)}
+.mearrow{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:18px solid #22D3EE;filter:drop-shadow(0 0 4px #000)}
+.wp{display:flex;align-items:center;transform:translate(-9px,-22px)}
+.wp i{width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px #000;display:block;flex:none}
+.wp b{margin-left:5px;font:600 11px Segoe UI,sans-serif;color:#fff;background:rgba(11,15,20,.82);padding:1px 6px;border-radius:2px;border:1px solid rgba(255,255,255,.25);white-space:nowrap}
+.leaflet-control-scale-line{background:rgba(255,255,255,.94);color:#111;border:2px solid #111;border-top:none;font:700 12px Segoe UI,sans-serif;text-shadow:none;padding:2px 8px;line-height:1.2}
+.leaflet-control-attribution{background:rgba(255,255,255,.88)!important;color:#111!important;font:11px Segoe UI,sans-serif}
+.leaflet-control-attribution a{color:#0B57D0!important}
+.dark-ui .leaflet-bar a{background:#18212B;color:#D6E2EE;border-bottom-color:#263241}
+</style>
+</head>
+<body>
+<div id="m"></div>
+<script src="leaflet.js"></script>
+<script>
+var map = L.map('m', {zoomControl: true}).setView([45, 9], 5);
+L.control.scale({imperial: false}).addTo(map);
+var layer = null;
+function setLayer(name) {
+  if (layer) map.removeLayer(layer);
+  layer = L.tileLayer('https://tiles.local/' + name + '/{z}/{x}/{y}.png', {maxZoom: 19, attribution: '&copy; OSM / OpenTopoMap / Esri'}).addTo(map);
+}
+setLayer('osm');
+var mk = L.marker([0, 0], {icon: L.divIcon({className: '', html: '<div class="me"></div>', iconSize: [22, 22], iconAnchor: [11, 11]}), interactive: false, zIndexOffset: 1000});
+var line = L.polyline([], {color: '#F59E0B', weight: 3, opacity: .9}).addTo(map);
+var view = L.layerGroup().addTo(map);
+var wpts = L.layerGroup().addTo(map);
+var gotoLine = null;
+var follow = true, first = true, last = null;
+function post(o) { window.chrome.webview.postMessage(o); }
+map.on('dragstart', function () { follow = false; post({type: 'free'}); });
+map.on('contextmenu', function (e) { post({type: 'addAt', lat: e.latlng.lat, lon: e.latlng.lng}); });
+window.chrome.webview.addEventListener('message', function (e) {
+  var d = e.data;
+  if (d.type === 'pos') {
+    var ll = [d.lat, d.lon]; last = ll;
+    if (!map.hasLayer(mk)) mk.addTo(map);
+    mk.setLatLng(ll);
+    if (d.track) line.addLatLng(ll);
+    if (follow || first) { map.setView(ll, first ? 17 : map.getZoom(), {animate: false}); first = false; }
+    if (gotoLine) gotoLine.setLatLngs([ll, gotoLine.getLatLngs()[1]]);
+  } else if (d.type === 'follow') { follow = true; if (last) map.setView(last); }
+  else if (d.type === 'clear') { line.setLatLngs([]); }
+  else if (d.type === 'layer') { setLayer(d.name); }
+  else if (d.type === 'theme') { document.body.className = d.dark ? 'dark-ui' : ''; }
+  else if (d.type === 'center') { follow = false; map.setView([d.lat, d.lon], Math.max(map.getZoom(), 15)); }
+  else if (d.type === 'wpts') {
+    wpts.clearLayers();
+    d.items.forEach(function (w) {
+      var m = L.marker([w.lat, w.lon], {icon: L.divIcon({className: '', iconSize: [0, 0],
+        html: '<div class="wp"><i style="background:' + w.color + '"></i><b>' + w.name.replace(/</g, '&lt;') + '</b></div>'})});
+      m.on('click', function () { post({type: 'wp', id: w.id}); });
+      m.addTo(wpts);
+    });
+  } else if (d.type === 'view') {
+    view.clearLayers();
+    var all = [];
+    d.tracks.forEach(function (t, i) {
+      var pl = L.polyline(t.pts, {color: ['#34D399', '#A78BFA', '#F472B6', '#60A5FA'][i % 4], weight: 4, opacity: .9}).addTo(view);
+      all = all.concat(t.pts);
+    });
+    if (all.length) { follow = false; map.fitBounds(L.latLngBounds(all), {padding: [40, 40]}); }
+  } else if (d.type === 'goto') {
+    if (gotoLine) { map.removeLayer(gotoLine); gotoLine = null; }
+    if (!d.off) gotoLine = L.polyline([last || [d.lat, d.lon], [d.lat, d.lon]], {color: '#F59E0B', weight: 2, dashArray: '6 6'}).addTo(map);
+  }
+});
+post({type: 'ready'});
+</script>
+</body>
+</html>

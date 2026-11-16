@@ -424,7 +424,7 @@ test-results/
 
 # Mac bundle stuff
 *.dmg
-*.app
+# (tolta la regola *.app del modello macOS: escludeva la cartella GpsBridge.App)
 
 # content below from: https://github.com/github/gitignore/blob/master/Global/macOS.gitignore
 # General
@@ -433,7 +433,7 @@ test-results/
 .LSOverride
 
 # Icon must end with two \r
-Icon
+# (tolta la regola Icon del modello macOS: escludeva la cartella Assets/icon)
 
 
 # Thumbnails

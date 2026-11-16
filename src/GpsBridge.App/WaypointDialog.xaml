@@ -1,0 +1,24 @@
+<Window Background="{DynamicResource Bg}" Foreground="{DynamicResource Text}" FontFamily="Segoe UI" FontSize="12" x:Class="GpsBridge.App.WaypointDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Punto" Width="430" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="18">
+        <TextBlock Text="NOME" Style="{StaticResource Cap}" Margin="0,0,0,1"/>
+        <TextBox x:Name="TxtName" FontFamily="Segoe UI" FontSize="14"/>
+        <TextBlock Text="COORDINATE (gradi decimali, DMS, DDM...)" Style="{StaticResource Cap}"/>
+        <TextBox x:Name="TxtCoord"/>
+        <TextBlock x:Name="TxtErr" Foreground="{DynamicResource Bad}" Margin="0,2,0,0" Visibility="Collapsed"/>
+        <TextBlock Text="QUOTA (m, facoltativa)" Style="{StaticResource Cap}"/>
+        <TextBox x:Name="TxtEle" Width="120" HorizontalAlignment="Left"/>
+        <TextBlock Text="COLORE" Style="{StaticResource Cap}"/>
+        <WrapPanel x:Name="Colors" Margin="0,2,0,0"/>
+        <TextBlock Text="NOTE" Style="{StaticResource Cap}"/>
+        <TextBox x:Name="TxtNotes" Height="64" AcceptsReturn="True" TextWrapping="Wrap" FontFamily="Segoe UI"/>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button x:Name="BtnDel" Content="Elimina" Style="{StaticResource Danger}" Visibility="Collapsed" Click="Del_Click"/>
+            <Button x:Name="BtnGo" Content="Vai a" Visibility="Collapsed" Click="Go_Click"/>
+            <Button Content="Annulla" IsCancel="True" MinWidth="80"/>
+            <Button Content="Salva" Style="{StaticResource Primary}" IsDefault="True" MinWidth="80" Click="Ok_Click"/>
+        </StackPanel>
+    </StackPanel>
+</Window>
