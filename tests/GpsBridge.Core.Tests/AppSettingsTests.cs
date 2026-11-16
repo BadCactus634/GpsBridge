@@ -1,4 +1,4 @@
-using GpsBridge.Core.Settings;
+﻿using GpsBridge.Core.Settings;
 using GpsBridge.Core.Ubx;
 using Xunit;
 
@@ -14,7 +14,7 @@ public class AppSettingsTests : IDisposable
     public void Save_then_Load_round_trips()
     {
         var path = Path.Combine(_dir, "s.json");
-        var s = new AppSettings { KmlPort = 9000, Units = Geo.UnitSystem.Nautical, CoordFormat = Geo.CoordFormat.Utm, AutoStartRecording = true };
+        var s = new AppSettings { KmlPort = 9000, Units = Geo.UnitSystem.Nautical, CoordFormat = Geo.CoordFormat.Utm, AutoStartRecording = true, Theme = "light" };
         s.Receiver.RateHz = 10; s.Receiver.Glonass = false;
         s.Save(path);
         var l = AppSettings.Load(path);
@@ -22,6 +22,7 @@ public class AppSettingsTests : IDisposable
         Assert.Equal(Geo.UnitSystem.Nautical, l.Units);
         Assert.Equal(Geo.CoordFormat.Utm, l.CoordFormat);
         Assert.True(l.AutoStartRecording);
+        Assert.Equal("light", l.Theme);
         Assert.Equal(10, l.Receiver.RateHz);
         Assert.False(l.Receiver.Glonass);
     }
@@ -34,6 +35,7 @@ public class AppSettingsTests : IDisposable
         File.WriteAllText(bad, "{ questo non e' json");
         var d = AppSettings.Load(bad);
         Assert.True(d.KmlEnabled);
+        Assert.Equal("auto", d.Theme);
         Assert.Equal(5, d.Receiver.RateHz);
     }
 
@@ -57,3 +59,4 @@ public class AppSettingsTests : IDisposable
         Assert.Equal(a, b);
     }
 }
+

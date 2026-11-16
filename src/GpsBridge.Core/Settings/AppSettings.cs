@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace GpsBridge.Core.Settings;
 
@@ -48,6 +48,8 @@ public sealed class AppSettings
     public Geo.UnitSystem Units { get; set; } = Geo.UnitSystem.Metric;
     /// <summary>Livello mappa: osm, topo, sat.</summary>
     public string MapLayer { get; set; } = "osm";
+    /// <summary>Tema dell'interfaccia: dark, light, auto (segue Windows).</summary>
+    public string Theme { get; set; } = "auto";
     public ReceiverOptions Receiver { get; set; } = new();
 
     public static string DefaultPath => Path.Combine(
@@ -65,3 +67,4 @@ public sealed class AppSettings
         File.WriteAllText(path, JsonSerializer.Serialize(this, Json));
     }
 }
+

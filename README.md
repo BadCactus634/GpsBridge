@@ -25,6 +25,7 @@ mappa, diagnostica, punti colorati, tracce GPX e posizione live in Google Earth.
 - **Diagnostica**: fix, HDOP/PDOP/VDOP, satelliti per costellazione con SNR, cielo (skyplot), frasi al secondo, errori.
 - **Google Earth**: «Apri in Google Earth» apre un KML (NetworkLink) che Earth ricarica ogni secondo da un mini server su `127.0.0.1`:
   posizione, traccia e punti colorati, e la vista ti segue. Niente porta COM virtuale né driver.
+- **Tema chiaro, scuro o automatico** (come Windows): il chiaro è pensato per la luce del sole.
 - **Unità e formati**: metriche / imperiali / nautiche; coordinate in gradi decimali, DMS, DDM o UTM.
 
 ## Requisiti
@@ -70,3 +71,4 @@ Le impostazioni stanno in `%AppData%\GpsBridge\settings.json`, i punti in `waypo
 ## Licenza
 
 MIT, vedi [LICENSE](LICENSE). Componenti di terze parti in [THIRD-PARTY.md](THIRD-PARTY.md).
+
