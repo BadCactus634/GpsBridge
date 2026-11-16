@@ -19,9 +19,9 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
 
     <!-- Identità e versione (si vedono in Proprietà del file e nel box «Informazioni») -->
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
     <Product>GpsBridge</Product>
     <AssemblyTitle>GpsBridge</AssemblyTitle>
     <Authors>Stefano Rossi</Authors>

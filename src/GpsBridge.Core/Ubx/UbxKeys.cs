@@ -58,6 +58,23 @@ public sealed class ReceiverProfile
     /// <summary>Profilo «migliore»: tutte le costellazioni ammesse, 5 Hz, modello portatile, NMEA completo. Baud invariato.</summary>
     public static ReceiverProfile Best => FromOptions(new ReceiverOptions());
 
+    /// <summary>Ordine di preferenza (Europa) fra le costellazioni principali quando il chip ne puo' usare meno di quelle richieste.</summary>
+    static readonly string[] MainPriority = { "GPS", "Galileo", "GLONASS", "BeiDou" };
+
+    /// <summary>
+    /// Profilo con al massimo <paramref name="max"/> costellazioni principali (GPS, Galileo, GLONASS, BeiDou) accese; le altre
+    /// vengono spente esplicitamente. QZSS e SBAS non contano. Restituisce anche i nomi di quelle tolte.
+    /// </summary>
+    public (ReceiverProfile Profile, IReadOnlyList<string> Limited) WithMaxMain(int max)
+    {
+        var mains = Constellations.Where(c => MainPriority.Contains(c.Name)).OrderBy(c => Array.IndexOf(MainPriority, c.Name)).ToList();
+        if (mains.Count <= max) return (this, Array.Empty<string>());
+        var drop = mains.Skip(max).ToList();
+        var keep = Constellations.Where(c => !drop.Contains(c)).ToList();
+        var other = Other.Concat(drop.SelectMany(d => d.Disable)).ToList();
+        return (new ReceiverProfile { Constellations = keep, Other = other }, drop.Select(d => d.Name).ToList());
+    }
+
     /// <summary>Tutte le chiavi che l'app puo' scrivere (per il ripristino dei default).</summary>
     public static IReadOnlyList<uint> ManagedKeys { get; } =
         FromOptions(new ReceiverOptions { UartBaud = 115200 }).Flatten(6).Select(x => x.Key).Distinct().ToList();

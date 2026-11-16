@@ -33,6 +33,9 @@ public static class UbxFrame
 
     public static byte[] MonVer() => Build(0x0A, 0x04, Array.Empty<byte>());
 
+    /// <summary>UBX-MON-GNSS (richiesta): costellazioni supportate/abilitate e quante se ne possono usare insieme.</summary>
+    public static byte[] MonGnss() => Build(0x0A, 0x28, Array.Empty<byte>());
+
     public static byte[] ValSet(byte layers, IEnumerable<(uint Key, ulong Value)> items)
     {
         var p = new List<byte> { 0, layers, 0, 0 };

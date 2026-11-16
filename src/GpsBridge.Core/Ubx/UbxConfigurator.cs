@@ -8,7 +8,11 @@ public sealed record ConfigDiff(IReadOnlyList<(uint Key, ulong Wanted, ulong? Ac
     public bool IsEmpty => Items.Count == 0;
 }
 
-public sealed record ApplyResult(bool Ok, bool AlreadyOk, IReadOnlyList<string> Active, IReadOnlyList<string> Dropped, string? Error);
+/// <summary>Capacita' del ricevitore da UBX-MON-GNSS. Bit: 0 GPS, 1 GLONASS, 2 BeiDou, 3 Galileo.</summary>
+public sealed record GnssCaps(byte Supported, byte Enabled, int Simultaneous);
+
+/// <param name="Dropped">Costellazioni non attivate: rifiutate (NAK) o oltre il massimo che il chip usa insieme.</param>
+public sealed record ApplyResult(bool Ok, bool AlreadyOk, IReadOnlyList<string> Active, IReadOnlyList<string> Dropped, string? Error, GnssCaps? Caps = null);
 
 /// <summary>Legge/scrive la configurazione del ricevitore via UBX (VALGET/VALSET) sul flusso gia' in uso.</summary>
 public sealed class UbxConfigurator
@@ -76,8 +80,20 @@ public sealed class UbxConfigurator
         return new ConfigDiff(diff);
     }
 
-    public async Task<ApplyResult> ApplyAsync(ReceiverProfile profile, byte layers)
+    /// <summary>Legge quante costellazioni il chip puo' usare insieme (null se il modello non risponde a MON-GNSS).</summary>
+    public async Task<GnssCaps?> ReadCapsAsync()
     {
+        var r = await RequestAsync(UbxFrame.MonGnss(), (c, i, _) => c == 0x0A && i == 0x28);
+        if (r is null || r.Value.Payload.Length < 5) return null;
+        var p = r.Value.Payload;
+        return new GnssCaps(p[1], p[3], p[4]);
+    }
+
+    public async Task<ApplyResult> ApplyAsync(ReceiverProfile requested, byte layers)
+    {
+        // Il chip ha un tetto di costellazioni principali in uso insieme (3 sul GM10): oltre, tornerebbe al solo GPS.
+        var caps = await ReadCapsAsync();
+        var (profile, limited) = caps is { Simultaneous: > 0 } c0 ? requested.WithMaxMain(c0.Simultaneous) : (requested, (IReadOnlyList<string>)Array.Empty<string>());
         var names = profile.Constellations.Select(c => c.Name).ToList();
         byte getLayer = (layers & UbxFrame.LayerFlash) != 0 ? UbxFrame.GetFlash : UbxFrame.GetRam;
         const string NoReply = "nessuna risposta dal ricevitore (cavo, baud o porta sbagliati?)";
@@ -85,17 +101,17 @@ public sealed class UbxConfigurator
         for (int n = names.Count; n >= 1; n--)
         {
             var diff = await DiffAsync(profile, n, getLayer);
-            if (diff is null) return new ApplyResult(false, false, names, Array.Empty<string>(), NoReply);
+            if (diff is null) return new ApplyResult(false, false, names, Array.Empty<string>(), NoReply, caps);
             var active = names.Take(n).ToList();
-            var dropped = names.Skip(n).ToList();
-            if (diff.IsEmpty) return new ApplyResult(true, true, active, dropped, null);
+            var dropped = limited.Concat(names.Skip(n)).ToList();
+            if (diff.IsEmpty) return new ApplyResult(true, true, active, dropped, null, caps);
 
             var ack = await RequestAsync(UbxFrame.ValSet(layers, profile.Flatten(n)),
                 (c, i, p) => IsAckFor(c, i, p, 0x06, 0x8A));
-            if (ack is null) return new ApplyResult(false, false, names, Array.Empty<string>(), NoReply);
-            if (ack.Value.Id == 0x01) return new ApplyResult(true, false, active, dropped, null);
+            if (ack is null) return new ApplyResult(false, false, names, Array.Empty<string>(), NoReply, caps);
+            if (ack.Value.Id == 0x01) return new ApplyResult(true, false, active, dropped, null, caps);
             // NAK: nulla e' stato scritto, si prova con una costellazione in meno
         }
-        return new ApplyResult(false, false, Array.Empty<string>(), names, "il ricevitore ha rifiutato tutte le combinazioni (NAK)");
+        return new ApplyResult(false, false, Array.Empty<string>(), limited.Concat(names).ToList(), "il ricevitore ha rifiutato tutte le combinazioni (NAK)", caps);
     }
 }

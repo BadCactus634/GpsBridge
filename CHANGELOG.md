@@ -1,4 +1,9 @@
-﻿# Changelog
+# Changelog
+
+## 1.1.1 - 2026-11-16
+- **Costellazioni**: il ricevitore (u-blox M10) puo' usarne al massimo 3 insieme; con 4 accese tornava al solo GPS. L'app ora legge il limite (UBX-MON-GNSS), attiva GPS + Galileo + GLONASS (BeiDou solo se la scegli al loro posto) e lo spiega in Impostazioni e Diagnostica.
+- Mappa: se si apriva dopo il primo fix, il puntino non compariva e la vista restava sull'Europa.
+- L'installer riapre l'app con i permessi dell'utente, non da amministratore.
 
 ## 1.1.0 - 2026-11-16
 Prima versione rifinita per il rilascio.

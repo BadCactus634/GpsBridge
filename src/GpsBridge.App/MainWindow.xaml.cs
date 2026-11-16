@@ -261,7 +261,7 @@ public partial class MainWindow : Window
             var r = doc.RootElement;
             switch (r.GetProperty("type").GetString())
             {
-                case "ready": _webReady = true; PushMapState(); break;
+                case "ready": _webReady = true; _lastSent = null; PushMapState(); break;   // _lastSent = null: al prossimo giro rimanda la posizione, anche se non e' cambiata
                 case "addAt": OpenDialog(null, r.GetProperty("lat").GetDouble(), r.GetProperty("lon").GetDouble(), null); break;
                 case "wp":
                     if (_wp.Items.FirstOrDefault(w => w.Id == Guid.Parse(r.GetProperty("id").GetString()!)) is { } w)
@@ -573,6 +573,10 @@ public partial class MainWindow : Window
         if (g.IsRecording) TrStatus.Text = $"{(g.IsPaused ? "In pausa" : "Registrazione in corso")}: {Path.GetFileName(g.CurrentFile)} ({g.Points} punti)";
         else if (!TrStatus.Text.StartsWith("Traccia salvata")) TrStatus.Text = "Registrazione ferma";
 
+        TxtCaps.Text = ap?.Caps is { Simultaneous: > 0 } cp
+            ? $"Questo ricevitore usa al massimo {cp.Simultaneous} costellazioni insieme (oltre tornerebbe al solo GPS). Se ne spunti di piu' tra GPS, Galileo, GLONASS e BeiDou, l'app ne attiva {cp.Simultaneous} in questo ordine di preferenza; QZSS e SBAS in piu'."
+            : "";
+
         // barra di stato
         SbFix.Text = $"{DiagnosticsModel.FixText(st.FixQuality)}  ·  sat {used}/{seen}  ·  {_bridge.Stats.Rate:0.0} frasi/s  ·  errori {_bridge.Stats.Bad}";
         SbKml.Text = _bridge.Live is not null ? $"KML live 127.0.0.1:{_bridge.Live.Port}" : _bridge.KmlError ?? "KML spento";
@@ -653,7 +657,7 @@ public partial class MainWindow : Window
         var ap = _bridge.LastApply;
         DgVer.Text = (_bridge.FirmwareVersion is { } v ? "Ricevitore: " + v : "Ricevitore: versione non letta") +
                      (ap is null ? "" : "\nCostellazioni attive: " + (ap.Ok ? string.Join(", ", ap.Active) +
-                        (ap.Dropped.Count > 0 ? "  (rifiutate: " + string.Join(", ", ap.Dropped) + ")" : "") : "configurazione non riuscita: " + ap.Error));
+                        (ap.Dropped.Count > 0 ? "  (non attivate: " + string.Join(", ", ap.Dropped) + (ap.Caps is { Simultaneous: > 0 } ? $"; il chip ne usa al massimo {ap.Caps.Simultaneous} insieme" : "") + ")" : "") : "configurazione non riuscita: " + ap.Error));
         GridConst.ItemsSource = DiagnosticsModel.Rows(st);
         GridSats.ItemsSource = st.Satellites;
         DrawSky(DiagnosticsModel.Sky(st));
@@ -777,7 +781,7 @@ public partial class MainWindow : Window
     static string Describe(ApplyResult r) =>
         !r.Ok ? "ERRORE: " + r.Error
         : (r.AlreadyOk ? "Gia' a posto, nessuna scrittura. " : "Scritto. ") + "Attive: " + string.Join(", ", r.Active) +
-          (r.Dropped.Count > 0 ? ". Rifiutate dal ricevitore: " + string.Join(", ", r.Dropped) : "");
+          (r.Dropped.Count > 0 ? ". Non attivate: " + string.Join(", ", r.Dropped) + (r.Caps is { Simultaneous: > 0 } ? $" (il chip ne usa al massimo {r.Caps.Simultaneous} insieme)" : " (rifiutate dal ricevitore)") : "");
 
     async void BtnApplyBest_Click(object s, RoutedEventArgs e)
     {

@@ -12,6 +12,8 @@ sealed class FakeReceiver
     public readonly Dictionary<int, Dictionary<uint, ulong>> Layers = new() { [0] = new(), [1] = new(), [2] = new() }; // RAM,BBR,Flash
     public int ValSets, Writes;
     public bool ResetSent;
+    public int Simultaneous = 4;      // costellazioni usabili insieme (MON-GNSS); il GM10 reale: 3
+    public bool NoMonGnss;            // modelli che non rispondono a MON-GNSS
     public bool Silent;
     public Func<IReadOnlyDictionary<uint, ulong>, bool> Accepts = _ => true;
 
@@ -55,6 +57,7 @@ sealed class FakeReceiver
             }
         }
         else if (cls == 0x06 && id == 0x04) ResetSent = true;
+        else if (cls == 0x0A && id == 0x28) { if (!NoMonGnss) Splitter.Feed(UbxFrame.Build(0x0A, 0x28, new byte[] { 0, 0x0F, 0x0D, 0x0F, (byte)Simultaneous, 0, 0, 0 })); }
         else if (cls == 0x06 && id == 0x8B)
         {
             int layer = p[1];
@@ -135,6 +138,44 @@ public class UbxConfiguratorTests
         Assert.True(r.Ok); Assert.True(r.AlreadyOk);
         Assert.Equal(before, rx.Writes);   // i tentativi rifiutati (NAK) non scrivono, quello gia' a posto non riscrive la flash
         Assert.Equal(new[] { "GPS", "Galileo", "BeiDou" }, r.Active);
+    }
+
+    [Fact]
+    public async Task Receiver_limited_to_three_constellations_gets_GPS_Galileo_GLONASS_and_BeiDou_is_switched_off()
+    {
+        var (rx, cfg) = Make();
+        rx.Simultaneous = 3;
+        var r = await cfg.ApplyAsync(ReceiverProfile.Best, All);
+        Assert.True(r.Ok);
+        Assert.Equal(3, r.Caps!.Simultaneous);
+        Assert.Equal(new[] { "GPS", "Galileo", "GLONASS", "QZSS", "SBAS" }, r.Active.OrderBy(a => Array.IndexOf(new[] { "GPS", "Galileo", "GLONASS", "QZSS", "SBAS" }, a)));
+        Assert.Equal(new[] { "BeiDou" }, r.Dropped);
+        Assert.Equal(1UL, rx.Layers[2][UbxKeys.GloEna]);
+        Assert.Equal(1UL, rx.Layers[2][UbxKeys.GalEna]);
+        Assert.Equal(0UL, rx.Layers[2][UbxKeys.BdsEna]);      // spenta di proposito, non lasciata com'era
+    }
+
+    [Fact]
+    public async Task Limit_is_applied_again_if_the_receiver_still_has_four_on_from_before()
+    {
+        var (rx, cfg) = Make();
+        rx.Simultaneous = 3;
+        foreach (var (k, v) in ReceiverProfile.Best.Flatten(6)) { rx.Layers[0][k] = v; rx.Layers[2][k] = v; }   // tutte e 4 accese in flash
+        var r = await cfg.ApplyAsync(ReceiverProfile.Best, All);
+        Assert.True(r.Ok); Assert.False(r.AlreadyOk);
+        Assert.Equal(0UL, rx.Layers[2][UbxKeys.BdsEna]);
+        var again = await cfg.ApplyAsync(ReceiverProfile.Best, All);
+        Assert.True(again.AlreadyOk);                           // la seconda volta non riscrive la flash
+    }
+
+    [Fact]
+    public async Task Receiver_without_MON_GNSS_keeps_all_four_as_before()
+    {
+        var (rx, cfg) = Make(200);
+        rx.NoMonGnss = true;
+        var r = await cfg.ApplyAsync(ReceiverProfile.Best, All);
+        Assert.True(r.Ok); Assert.Null(r.Caps); Assert.Empty(r.Dropped);
+        Assert.Equal(1UL, rx.Layers[2][UbxKeys.BdsEna]);
     }
 
     [Fact]
