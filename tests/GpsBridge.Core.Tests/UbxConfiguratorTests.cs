@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using GpsBridge.Core.Nmea;
 using GpsBridge.Core.Ubx;
 using Xunit;
@@ -11,6 +11,7 @@ sealed class FakeReceiver
     public readonly FrameSplitter Splitter = new();
     public readonly Dictionary<int, Dictionary<uint, ulong>> Layers = new() { [0] = new(), [1] = new(), [2] = new() }; // RAM,BBR,Flash
     public int ValSets, Writes;
+    public bool ResetSent;
     public bool Silent;
     public Func<IReadOnlyDictionary<uint, ulong>, bool> Accepts = _ => true;
 
@@ -44,6 +45,16 @@ sealed class FakeReceiver
             Writes++;
             Splitter.Feed(UbxFrame.Build(0x05, 0x01, new byte[] { 0x06, 0x8A }));
         }
+        else if (cls == 0x06 && id == 0x8C)
+        {
+            for (int i = 4; i + 4 <= p.Length; i += 4)
+            {
+                uint k = BitConverter.ToUInt32(p, i);
+                if ((p[1] & 2) != 0) Layers[1].Remove(k);
+                if ((p[1] & 4) != 0) Layers[2].Remove(k);
+            }
+        }
+        else if (cls == 0x06 && id == 0x04) ResetSent = true;
         else if (cls == 0x06 && id == 0x8B)
         {
             int layer = p[1];

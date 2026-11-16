@@ -58,6 +58,10 @@ public sealed class ReceiverProfile
     /// <summary>Profilo «migliore»: tutte le costellazioni ammesse, 5 Hz, modello portatile, NMEA completo. Baud invariato.</summary>
     public static ReceiverProfile Best => FromOptions(new ReceiverOptions());
 
+    /// <summary>Tutte le chiavi che l'app puo' scrivere (per il ripristino dei default).</summary>
+    public static IReadOnlyList<uint> ManagedKeys { get; } =
+        FromOptions(new ReceiverOptions { UartBaud = 115200 }).Flatten(6).Select(x => x.Key).Distinct().ToList();
+
     public static ReceiverProfile FromOptions(ReceiverOptions o)
     {
         // Ordine di priorita' (da coda si scende in caso di NAK); quelle spente a mano non entrano nell'elenco e vengono spente in Other.
