@@ -1,4 +1,6 @@
-﻿# GpsBridge
+﻿<p align="center"><img src="docs/icon.png" width="128" alt="Icona di GpsBridge"></p>
+
+# GpsBridge
 
 App Windows per ricevitori GPS u-blox (testata su un USB «G-Mouse» con chip M10): legge il ricevitore sulla porta
 seriale, lo configura per usare **tutte le costellazioni** (GPS, Galileo, BeiDou, GLONASS, QZSS, SBAS) e offre
@@ -25,6 +27,7 @@ mappa, diagnostica, punti colorati, tracce GPX e posizione live in Google Earth.
 - **Diagnostica**: fix, HDOP/PDOP/VDOP, satelliti per costellazione con SNR, cielo (skyplot), frasi al secondo, errori.
 - **Google Earth**: «Apri in Google Earth» apre un KML (NetworkLink) che Earth ricarica ogni secondo da un mini server su `127.0.0.1`:
   posizione, traccia e punti colorati, e la vista ti segue. Niente porta COM virtuale né driver.
+- **Aggiornamenti**: all'avvio controlla le [Releases](https://github.com/BadCactus634/GpsBridge/releases) di GitHub; se c'è una versione nuova ti avvisa e puoi scaricarla e installarla con un clic (verifica SHA-256; disattivabile in Impostazioni).
 - **Tema chiaro, scuro o automatico** (come Windows): il chiaro è pensato per la luce del sole.
 - **Unità e formati**: metriche / imperiali / nautiche; coordinate in gradi decimali, DMS, DDM o UTM.
 
@@ -46,9 +49,12 @@ dotnet run --project src/GpsBridge.App -- --replay tests/data/sample-multi-gnss.
 Installer (richiede [Inno Setup 6](https://jrsoftware.org/isinfo.php)):
 
 ```powershell
-dotnet publish src/GpsBridge.App -c Release -r win-x64 --self-contained -o installer/publish
-ISCC installer/GpsBridge.iss
+powershell -File tools/build-installer.ps1   # crea installer/output/GpsBridge-setup.exe
 ```
+
+Per rilasciare una versione: alza `Version` in `src/GpsBridge.App/GpsBridge.App.csproj`, aggiorna `CHANGELOG.md`, esegui lo script,
+poi `gh release create vX.Y.Z installer/output/GpsBridge-setup.exe`. L'app confronta il tag della release con la propria versione
+e avvisa chi ha una versione più vecchia.
 
 ## Architettura
 
@@ -70,5 +76,6 @@ Le impostazioni stanno in `%AppData%\GpsBridge\settings.json`, i punti in `waypo
 
 ## Licenza
 
-MIT, vedi [LICENSE](LICENSE). Componenti di terze parti in [THIRD-PARTY.md](THIRD-PARTY.md).
+Ideato e sviluppato da **Stefano Rossi** ([natmus.net](https://natmus.net), [@BadCactus634](https://github.com/BadCactus634)). MIT, vedi [LICENSE](LICENSE). Componenti di terze parti in [THIRD-PARTY.md](THIRD-PARTY.md).
+
 

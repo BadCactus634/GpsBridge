@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace GpsBridge.Core.Settings;
 
@@ -50,6 +50,10 @@ public sealed class AppSettings
     public string MapLayer { get; set; } = "osm";
     /// <summary>Tema dell'interfaccia: dark, light, auto (segue Windows).</summary>
     public string Theme { get; set; } = "auto";
+    /// <summary>Controlla all'avvio se su GitHub c'e' una versione piu' nuova (contatta solo api.github.com).</summary>
+    public bool CheckUpdates { get; set; } = true;
+    /// <summary>Versione che l'utente ha scelto di non installare (non viene riproposta).</summary>
+    public string? SkipVersion { get; set; }
     public ReceiverOptions Receiver { get; set; } = new();
 
     public static string DefaultPath => Path.Combine(
