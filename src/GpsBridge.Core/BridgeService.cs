@@ -28,6 +28,8 @@ public sealed class BridgeService : IDisposable
     public GnssState State { get; } = new();
     public GpxRecorder Gpx { get; }
     public EarthWriter Earth { get; }
+    public Kml.KmlServer? Live { get; private set; }
+    public string? KmlError { get; private set; }
     public UbxConfigurator Config { get; }
     public BridgeStats Stats { get; } = new();
     public Task Running { get; private set; } = Task.CompletedTask;
@@ -58,7 +60,7 @@ public sealed class BridgeService : IDisposable
         var src = new SerialSource((n, b) => new SerialPortAdapter(n, b),
             () => SerialPortAdapter.List().Where(p => p != s.EarthPort && p != s.EarthPeerPort),
             s.RealPort, s.RealBaud, preferredPort: s.LastPort, preferredBaud: s.LastBaud);
-        var earth = new PortWriter(() => new SerialPortAdapter(s.EarthPort, s.EarthBaud));
+        IByteStream earth = s.EarthComEnabled ? new PortWriter(() => new SerialPortAdapter(s.EarthPort, s.EarthBaud)) : new NullStream();
         return new BridgeService(s, src, earth);
     }
 
@@ -91,6 +93,7 @@ public sealed class BridgeService : IDisposable
         }
         State.Apply(s);
         Earth.OnSentence(s);
+        if (s.Type == "RMC" && State.Position is { } kp) Live?.Update(kp, DiagnosticsModel.FixText(State.FixQuality));
         if (s.Type == "RMC" && State.Position is { } pos)
             Gpx.OnFix(pos, State.Satellites.Count(x => x.Used), State.Hdop);
     }
@@ -99,6 +102,7 @@ public sealed class BridgeService : IDisposable
     {
         if (_cts is not null) return;
         RepairGpxFiles();
+        StartKml();
         _cts = new CancellationTokenSource();
         if (_source is not SerialSource) SetConnection(ConnState.Connected);
         Running = _source.RunAsync(_cts.Token);
@@ -110,6 +114,21 @@ public sealed class BridgeService : IDisposable
         _cts?.Cancel(); _cts = null;
         Gpx.Stop();
     }
+
+    void StartKml()
+    {
+        if (!_settings.KmlEnabled || Live is not null) return;
+        try
+        {
+            Live = new Kml.KmlServer(_settings.KmlPort) { Follow = _settings.KmlFollow };
+            Live.Start();
+            Directory.CreateDirectory(Path.GetDirectoryName(LinkFile)!);
+            File.WriteAllText(LinkFile, Live.NetworkLinkKml());
+        }
+        catch (Exception e) { KmlError = "KML non disponibile: " + e.Message; Live?.Dispose(); Live = null; }
+    }
+
+    public static string LinkFile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GpsBridge", "GpsBridge-live.kml");
 
     void RepairGpxFiles()
     {
@@ -124,6 +143,7 @@ public sealed class BridgeService : IDisposable
     public void Dispose()
     {
         Stop();
+        Live?.Dispose(); Live = null;
         (_earthOut as IDisposable)?.Dispose();
     }
 }

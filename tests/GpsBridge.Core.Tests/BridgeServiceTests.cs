@@ -18,7 +18,7 @@ public class BridgeServiceTests : IDisposable
     {
         var path = Path.Combine(AppContext.BaseDirectory, "data", "sample-multi-gnss.nmea");
         var earth = new CaptureStream();
-        var settings = new AppSettings { GpxDir = _dir, EarthHz = 1 };
+        var settings = new AppSettings { GpxDir = _dir, EarthHz = 1, KmlEnabled = false };
         var svc = new BridgeService(settings, new ReplayStream(path, lineDelayMs: 1, loop: false), earth, applyProfileOnConnect: false);
         GnssFix? lastFix = null;
         svc.State.Changed += () => lastFix = svc.State.Position ?? lastFix;
@@ -43,7 +43,7 @@ public class BridgeServiceTests : IDisposable
     {
         var src = new PushSource();
         var earth = new CaptureStream();
-        var svc = new BridgeService(new AppSettings { GpxDir = _dir }, src, earth, applyProfileOnConnect: false);
+        var svc = new BridgeService(new AppSettings { GpxDir = _dir, KmlEnabled = false }, src, earth, applyProfileOnConnect: false);
         svc.Start();
         src.Push("$GPGGA,1,2,3*00\r\n");             // checksum errato
         src.Push("$GPRMC,1,2,3,4\r\n");              // senza checksum

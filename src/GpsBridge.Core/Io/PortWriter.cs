@@ -56,3 +56,10 @@ public sealed class PortWriter : IByteStream, IDisposable
 
     public void Dispose() { _q.CompleteAdding(); _t.Join(2000); }
 }
+
+/// <summary>Uscita nulla (COM virtuale disattivata).</summary>
+public sealed class NullStream : IByteStream
+{
+    public event Action<byte[]>? DataReceived { add { } remove { } }
+    public void Write(ReadOnlySpan<byte> data) { }
+}

@@ -62,3 +62,6 @@ Nomi delle classi, layout della UI (schede Mappa / Diagnostica / Traccia / Confi
 - Il GM10 puo' avere un firmware con meno costellazioni: l'app mostra il risultato reale, non promette 4.
 - Nome «GpsBridge» e cartella `Documents\GpsBridge`, repo git locale, non nel repo EnjoyBuds.
 - Uscita verso Earth a 1 Hz di default (Earth non serve di piu'), il GPX e la mappa usano la frequenza piena (fino a 10 Hz).
+
+## Aggiornamento 16/11: Earth senza COM virtuale
+com0com e' bloccato da HVCI/Secure Boot su questo PC (errore 52) e gli altri driver sono a pagamento. Scelta dell'utente: KML live (NetworkLink su http://127.0.0.1:8765, aggiornamento 1 s, segue la posizione). La COM virtuale resta opzionale (impostazione EarthComEnabled, spenta di default).
